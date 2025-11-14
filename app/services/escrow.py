@@ -1,0 +1,305 @@
+from decimal import Decimal
+from db.dependencies import db_dependency
+from fastapi import HTTPException, Depends, Path, Query
+from schemas.escrow import (TransactionInstance, UserConfirmation, 
+                            ReleaseFunds, CancelRequest)
+from db.models import (Escrow, 
+                       EscrowStatus, 
+                       User, 
+                       Wallet, 
+                       WalletTransaction, 
+                       TransactionType, 
+                       TransactionStatus)
+from db.dependencies import db_dependency
+from datetime import datetime
+from sqlalchemy import or_
+
+
+
+async def create_transaction(
+    transaction_instance: TransactionInstance,
+    db: db_dependency,
+):
+    try:
+        with db.begin():  # atomic transaction
+            user_model = db.query(User).filter(User.source_id == transaction_instance.client_id).first()
+            if not user_model:
+                raise HTTPException(status_code=404, detail="User not found")
+
+            merchant_model = db.query(User).filter(User.source_id == transaction_instance.merchant_id).first()
+            if not merchant_model:
+                raise HTTPException(status_code=404, detail="Merchant not found")
+
+            escrow_model = Escrow(
+                client_id=transaction_instance.client_id,
+                merchant_id=transaction_instance.merchant_id,
+                amount=transaction_instance.amount,
+                status=EscrowStatus.PENDING, #change to funded.
+                created_at=datetime.now()
+            )
+            db.add(escrow_model)
+
+        return {
+            "escrow_id": escrow_model.id,
+            "status": escrow_model.status,
+            "amount": escrow_model.amount,
+            "message": "Transaction created successfully"
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Transaction failed: {str(e)}")
+
+
+
+#get request
+async def get_transaction_history(
+    db: db_dependency,
+    user_id = Query(...),
+    actor = Query(...)
+):
+    if actor not in ["merchant", "client"]:
+        raise HTTPException(status_code=400, detail="Invalid actor type, 'client' or 'merchant' expected")
+    
+    user_model = db.query(User).filter(User.source_id == user_id).first()
+    if not user_model:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    if actor == "merchant":
+        transaction_model = db.query(Escrow).filter(Escrow.merchant_id == user_model.source_id).all()
+        
+    elif actor == "client":
+        transaction_model = db.query(Escrow).filter(Escrow.client_id == user_model.source_id).all()
+    
+    return [
+        {
+        "id": transaction.id,
+        "status": transaction.status,
+        "amount": transaction.amount,
+        "created_at": transaction.created_at,
+        "finalized_at": transaction.finalized_at
+    } 
+        for transaction in transaction_model]
+
+
+async def get_transaction_by_id(
+    db: db_dependency,
+    escrow_transaction_id = Query(...)
+):
+    transaction_model = db.query(Escrow).filter(Escrow.id == escrow_transaction_id).first()
+    if not transaction_model:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+    
+    return {
+        "id": transaction_model.id,
+        "status": transaction_model.status,
+        "amount": transaction_model.amount,
+        "created_at": transaction_model.created_at,
+        "finalized_at": transaction_model.finalized_at
+    }
+
+
+
+    
+    
+
+async def client_confirm_transaction(
+    user_confirmation: UserConfirmation,
+    db: db_dependency,
+    #actor: str = Path(..., description="Either 'client' or 'merchant'")
+):
+    user_model = db.query(User).filter(User.source_id == user_confirmation.user_id).first()
+    if not user_model:
+        raise HTTPException(status_code=404, detail="User does not exist")
+    
+    escrow_model = db.query(Escrow).filter(Escrow.id == user_confirmation.escrow_id).first()
+    check_transaction_cancelability(user_confirmation.escrow_id, db)
+    if not escrow_model:
+        raise HTTPException(status_code=404, detail="Escrow not found")
+    
+    if not escrow_model.client_id == user_model.source_id:
+        raise HTTPException(status_code=401, detail="Client not authorized to confirm this transaction")
+    
+    escrow_model.client_agree = user_confirmation.confirm_status
+    db.commit()
+    
+    return {
+        "id": escrow_model.id,
+        "status": escrow_model.status,
+        "message": "Transaction confirmed successfully"
+    }
+    
+    
+async def merchant_confirm_transaction(
+    user_confirmation: UserConfirmation,
+    db: db_dependency,
+    #actor: str = Path(..., description="Either 'client' or 'merchant'")
+):
+    user_model = db.query(User).filter(User.source_id == user_confirmation.user_id).first()
+    if not user_model:
+        raise HTTPException(status_code=404, detail="User does not exist")
+    
+    escrow_model = db.query(Escrow).filter(Escrow.id == user_confirmation.escrow_id).first()
+    if not escrow_model:
+        raise HTTPException(status_code=404, detail="Escrow not found")
+    
+    check_transaction_cancelability(user_confirmation.escrow_id, db)
+    
+    if not escrow_model.merchant_id == user_model.source_id:
+        raise HTTPException(status_code=401, detail="Client not authorized to confirm this transaction")
+    
+    escrow_model.merchant_agree = user_confirmation.confirm_status
+    db.commit()
+    
+    return {
+        "id": escrow_model.id,
+        "status": escrow_model.status,
+        "message": "Transaction confirmed successfully"
+    }
+    
+
+async def client_release_funds(
+    db: db_dependency,
+    release_funds: ReleaseFunds
+):
+    user_model = db.query(User).filter(User.source_id == release_funds.user_id).first()
+    if not user_model:
+        raise HTTPException(status_code=404, detail="User does not exist")
+
+    escrow_model = db.query(Escrow).filter(Escrow.id == release_funds.escrow_id).first()
+    if not escrow_model:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+    
+    if user_model.source_id != escrow_model.client_id:
+        raise HTTPException(status_code=401, detail="Client not authorized")
+    
+    check_transaction_cancelability(release_funds.escrow_id, db)
+    
+    wallet_model = (
+                db.query(Wallet)
+                .filter(Wallet.owner_id == user_model.id)
+                .with_for_update()
+                .first()
+            )
+    if not wallet_model:
+        raise HTTPException(status_code=404, detail="Wallet not found")
+    
+    if escrow_model.status != EscrowStatus.PENDING:
+        return {
+            "id": escrow_model.id,
+            "status": escrow_model.status,
+            "message": "Transaction is not pending, you can't release funds"
+        }
+
+    amount = Decimal(escrow_model.amount)
+    if amount <= 0:
+        raise HTTPException(status_code=400, detail="Invalid transaction amount")
+    if wallet_model.balance < amount:
+        raise HTTPException(status_code=400, detail="Insufficient funds")
+
+    wallet_model.balance -= amount
+    escrow_model.status = EscrowStatus.FUNDED
+    db.commit()
+    return {
+        "id": escrow_model.id,
+        "status": escrow_model.status,
+        "message": "Funds released successfully"
+    }
+    
+    
+async def merchant_release_funds(
+    db: db_dependency,
+    release_funds: ReleaseFunds
+):
+    
+    user_model = db.query(User).filter(User.source_id == release_funds.user_id).first()
+    if not user_model:
+        raise HTTPException(status_code=404, detail="User does not exist")
+
+    escrow_model = db.query(Escrow).filter(Escrow.id == release_funds.escrow_id).first()
+    
+    if not escrow_model:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+    
+    if user_model.source_id != escrow_model.merchant_id:
+        raise HTTPException(status_code=401, detail="Merchant not authorized")
+    
+    check_transaction_cancelability(release_funds.escrow_id, db)
+    
+    
+    if not (escrow_model.merchant_agree and escrow_model.client_agree):
+        raise HTTPException(status_code=400, detail="Transaction not confirmed by both parties")
+    
+    if escrow_model.status != EscrowStatus.FUNDED:
+        raise HTTPException(status_code=400, detail="Transaction is not pending")
+    
+    wallet_model = db.query(Wallet).filter(Wallet.owner_id == user_model.id).first()
+
+    wallet_model.balance += escrow_model.amount
+    escrow_model.finalized_at = datetime.now()
+    #add to wallet transaction
+    txn = WalletTransaction(
+        wallet_id=wallet_model.id,
+        amount=escrow_model.amount,
+        transaction_type=TransactionType.ESCROW_RELEASE,
+        status=TransactionStatus.SUCCESS,
+        timestamp=datetime.now()
+    )
+    db.add(txn)
+    
+    escrow_model.status = EscrowStatus.RELEASED
+    db.commit()
+    return {
+        "id": escrow_model.id,
+        "status": escrow_model.status,
+        "message": "Funds released successfully"
+    }
+
+    
+
+
+
+
+async def update_transactions():
+    pass
+
+
+async def cancel_transaction(
+    db: db_dependency,
+    cancel_request: CancelRequest
+):
+    user_model = db.query(User).filter(User.source_id == cancel_request.user_id).first()
+    if not user_model:
+        raise HTTPException(status_code=404, detail="User does not exist")
+    
+
+    escrow_model = db.query(Escrow).filter(Escrow.id == cancel_request.escrow_id).first()
+    
+    if escrow_model.client_id == user_model.source_id or escrow_model.merchant_id == user_model.source_id:
+        raise HTTPException(status_code=401, detail="You are not authorized to cancel this transaction")
+    
+    escrow_model.status = EscrowStatus.CANCELLED
+    db.commit()
+    
+    return {
+        "id": escrow_model.id,
+        "status": escrow_model.status,
+        "message": "Transaction cancelled successfully"
+    }
+    
+    
+    
+    
+def check_transaction_cancelability(id: str, 
+                             db: db_dependency):
+    escrow_model = db.query(Escrow).filter(Escrow.id == id).first()
+    
+    if not escrow_model:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+    
+    if escrow_model.status == EscrowStatus.CANCELLED:
+        return {
+        "status": "This transaction has been cancelled"
+    }

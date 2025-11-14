@@ -1,0 +1,25 @@
+from pydantic import EmailStr, BaseModel, Field
+from typing import Optional
+
+
+class UserConfirmation(BaseModel):
+    user_id: str #id from the source
+    escrow_id: str #id of the escrow
+    confirm_status: bool = Field(default=False)
+    
+    
+class TransactionInstance(BaseModel):
+    merchant_id: str #id from the source
+    client_id: str #id from the source
+    amount: float = Field(gt=0.00)
+    
+    
+class ReleaseFunds(BaseModel):
+    escrow_id: str
+    user_id: str #id from the source
+    
+    
+class CancelRequest(BaseModel):
+    user_id: str
+    escrow_id: str
+    
