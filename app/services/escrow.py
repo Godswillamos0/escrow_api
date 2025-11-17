@@ -277,10 +277,13 @@ async def cancel_transaction(
 
     escrow_model = db.query(Escrow).filter(Escrow.id == cancel_request.escrow_id).first()
     
-    if escrow_model.client_id == user_model.source_id or escrow_model.merchant_id == user_model.source_id:
-        raise HTTPException(status_code=401, detail="You are not authorized to cancel this transaction")
+    if escrow_model.client_id != user_model.source_id:
+        if escrow_model.merchant_id != user_model.source_id:
+            raise HTTPException(status_code=401, detail="You are not authorized to cancel this transaction")
+        pass
     
     escrow_model.status = EscrowStatus.CANCELLED
+    escrow_model.finalized_at = datetime.now()
     db.commit()
     
     return {
@@ -300,6 +303,4 @@ def check_transaction_cancelability(id: str,
         raise HTTPException(status_code=404, detail="Transaction not found")
     
     if escrow_model.status == EscrowStatus.CANCELLED:
-        return {
-        "status": "This transaction has been cancelled"
-    }
+        raise HTTPException (status_code=403, detail="Transaction cancelled.")
