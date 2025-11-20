@@ -10,8 +10,8 @@ async def fetch_banks() -> dict:
     async with httpx.AsyncClient() as client:
         r = await client.get(url, headers=headers)
 
-        print("Status Code:", r.status_code)
-        print("Raw Response:", r.text)  # <-- IMPORTANT
+        #print("Status Code:", r.status_code)
+        #print("Raw Response:", r.text)  # <-- IMPORTANT
 
         r.raise_for_status()
         return r.json()

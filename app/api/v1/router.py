@@ -5,6 +5,8 @@ from . import (
     wallet,
     bank
 )
+from .admin import router as admin_router
+
 
 router = APIRouter(
     prefix="/api"
@@ -24,4 +26,8 @@ router.include_router(
 
 router.include_router(
     bank.router
+)
+
+router.include_router(
+    admin_router.router
 )

@@ -20,12 +20,22 @@ from sqlalchemy import asc, or_
 
 
 
-async def get_escrow_by_id(escrow_id: int = Path(..., description="The ID of the escrow transaction to retrieve"),
-                      db=Depends(db_dependency)) -> Escrow:
+async def get_escrow_by_id(escrow_id: str = Query(..., description="The ID of the escrow transaction to retrieve"),
+                      db=Depends(db_dependency)) -> dict:
     escrow = db.query(Escrow).filter(Escrow.id == escrow_id).first()
     if not escrow:
         raise HTTPException(status_code=404, detail="Escrow transaction not found")
-    return escrow
+    return {
+        "id": escrow.id,
+        "status": escrow.status,
+        "amount": escrow.amount,
+        "created_at": escrow.created_at,
+        "finalized_at": escrow.finalized_at,
+        "client_id": escrow.client_id,
+        "merchant_id": escrow.merchant_id,
+        "client_agree": escrow.client_agree,
+        "merchant_agree": escrow.merchant_agree,
+    }
 
 
 async def get_all_transactions(db=Depends(db_dependency)):
@@ -137,4 +147,3 @@ async def resolve_dispute(
     return {
         "detail": "Dispute resolved and funds released successfully"
         }
-

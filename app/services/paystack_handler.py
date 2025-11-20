@@ -13,6 +13,7 @@ from utils.mail_config import send_mail
 from decimal import Decimal
 from core.config import PAYSTACK_SECRET
 
+
 PAYSTACK_SECRET = PAYSTACK_SECRET
 
 def verify_paystack_signature(request_body: bytes, signature: str) -> bool:
@@ -102,10 +103,6 @@ async def paystack_webhook_handler(request: Request,
         )
         
         
-         
-        # fulfill the order, etc., using the reference and amount.
-        print(f"✅ Success: Transaction {reference} for {amount/100:.2f} processed.")
-        print(email)
     elif event_type == "charge.failed":
         transaction_data = event_payload.get("data")
         reference = transaction_data.get("reference")
@@ -133,12 +130,60 @@ async def paystack_webhook_handler(request: Request,
             "message":f"❌ Failure: Transaction {reference} failed."
         }
 
+        
     elif event_type == "transfer.success":
         transfer_data = event_payload.get("data")
         reference = transfer_data.get("reference")
-        # This confirms a withdrawal was successful.
-        # Update your withdrawal transaction status to SUCCESS.
-        print(f"✅ Success: Transfer {reference} was successful.")
+        transfer_code = transfer_data.get("transfer_code")
+
+        # 1. Find the matching withdrawal transaction
+        txn = db.query(WalletTransaction).filter(
+            WalletTransaction.reference_code == f"{reference}_{transfer_code}",
+        ).first()
+
+        if not txn:
+            print("⚠️ No matching transaction found for transfer.success")
+            return {"message": "No matching withdrawal transaction found"}
+
+        # 2. Prevent double-processing
+        if txn.status == TransactionStatus.SUCCESS:
+            print("⚠️ Withdrawal already marked as SUCCESS")
+            return {"message": "Already processed"}
+
+        # 3. Deduct the amount from the wallet
+        wallet = db.query(Wallet).filter(Wallet.id == txn.wallet_id).first()
+        if not wallet:
+            print("❌ Wallet not found for withdrawal transaction")
+            return {"error": "Wallet not found"}
+
+        if wallet.balance < txn.amount:
+            # Should never happen — internal logic error
+            print("❌ Wallet insufficient even though withdrawal was initiated")
+            # Mark as FAILED since money cannot be deducted
+            txn.status = TransactionStatus.FAILED
+            db.commit()
+            return {"error": "Wallet insufficient"}
+
+        wallet.balance -= txn.amount
+
+        # 4. Update transaction status
+        txn.status = TransactionStatus.SUCCESS
+        txn.completed_at = datetime.utcnow()
+
+        db.commit()
+
+        # 5. Send success email
+        await send_mail(
+            email=wallet.owner.email,
+            subject="Withdrawal Completed",
+            body=f"""
+                Your withdrawal of {txn.amount} has been successfully completed.
+                Reference: {txn.reference_code}
+                """
+        )
+
+        return {"message": "Withdrawal marked as successful"}    
+    
 
     elif event_type == "transfer.failed":
         transfer_data = event_payload.get("data")
@@ -146,6 +191,45 @@ async def paystack_webhook_handler(request: Request,
         # This indicates a withdrawal failed.
         # You should revert the withdrawal transaction and notify the user.
         print(f"❌ Failure: Transfer {reference} failed.")
+        
+        
+    elif event_type == "transfer.failed":
+        transfer_data = event_payload.get("data")
+        reference = transfer_data.get("reference")
+        transfer_code = transfer_data.get("transfer_code")
+
+        txn = db.query(WalletTransaction).filter(
+            (WalletTransaction.external_reference == reference) |
+            (WalletTransaction.external_transfer_code == transfer_code)
+        ).first()
+
+        if not txn:
+            print("⚠️ No matching transaction found for transfer.failed")
+            return {"message": "No matching withdrawal transaction found"}
+
+        if txn.status in (TransactionStatus.SUCCESS, TransactionStatus.FAILED):
+            return {"message": "Already processed"}
+
+        txn.status = TransactionStatus.FAILED
+        txn.completed_at = datetime.utcnow()
+
+        db.commit()
+
+        # Send failure email
+        wallet = db.query(Wallet).filter(Wallet.id == txn.wallet_id).first()
+        await send_mail(
+            email=wallet.owner.email,
+            subject="Withdrawal Failed",
+            body=f"""
+                Your withdrawal of {txn.amount} failed.
+                Reference: {txn.reference_code}
+
+                Please try again or contact support.
+                """
+        )
+
+        return {"message": "Withdrawal marked as failed"}
+        
 
     elif event_type == "charge.dispute.create":
         dispute_data = event_payload.get("data")
@@ -181,6 +265,12 @@ async def initialize_payment(payment: PaymentRequest,
     
     if not user_model:
         raise HTTPException(status_code=404, detail="User not found")
+    
+    wallet_model = db.query(Wallet).filter(Wallet.owner_id == user_model.id).first()
+    if not wallet_model:
+        raise HTTPException(status_code=404, detail="Wallet not found")
+    
+    wallet_dependency(wallet_id=wallet_model.id, db=db)
     
     payment.metadata.wallet_id = user_model.wallets[0].id
     payment.amount *= 100 #Conversion to Kobo for paystack
@@ -225,3 +315,18 @@ async def initialize_payment(payment: PaymentRequest,
         "checkout_url": auth_url,
         "reference": reference,
     }
+    
+    
+def wallet_dependency(wallet_id: str,
+                      db: db_dependency):
+    if not wallet_id:
+        raise HTTPException(status_code=400, detail="Wallet ID is required")
+    
+    wallet_model = db.query(Wallet).filter(Wallet.id == wallet_id).first()
+    if not wallet_model:
+        raise HTTPException(status_code=404, detail="Wallet not found")
+    
+    if wallet_model.is_frozen:
+        raise HTTPException(status_code=403, detail="Wallet is frozen")
+    
+    return True

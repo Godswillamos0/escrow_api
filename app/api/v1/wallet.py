@@ -3,13 +3,15 @@ from services.wallet import (create_wallet,
                              withdraw_funds, 
                              add_funds_to_wallet, 
                              get_balance, 
-                             transaction_history)
+                             transaction_history,
+                             wallet_dependency)
 from services.paystack_handler import initialize_payment
 
 
 router = APIRouter(
     prefix="/wallet",
-    tags=["wallet"]
+    tags=["wallet"],
+    #dependencies=[wallet_dependency]
 )
 
 

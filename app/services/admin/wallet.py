@@ -9,6 +9,7 @@ from schemas.wallet import (PaymentRequest,
 from db.dependencies import db_dependency
 #from .paystack_handler import initialize_payment
 from utils.mail_config import send_mail
+from utils.mail_config import send_mail
 
 
 async def get_wallet_by_user_id(
@@ -125,12 +126,25 @@ async def freeze_wallet(
     user_id: str = Query(..., description="The ID of the user whose wallet to freeze"),
     db: db_dependency = db_dependency
 ):
+    
+    user_model = db.query(User).filter(User.source_id == user_id).first()
+    if not user_model:
+        raise HTTPException(status_code=404, detail="User not found")
+    
     wallet = db.query(Wallet).join(User).filter(User.source_id == user_id).first()
     if not wallet:
         raise HTTPException(status_code=404, detail="Wallet not found for the specified user")
     
     wallet.is_frozen = True
     db.commit()
+    
+    send_mail(
+        email=user_model.email,
+        subject="Wallet Frozen",
+        body= f'''
+        Your wallet has been frozen due to suspicious activities. Please contact support for more information.
+        '''
+    )
     
     return {
         "message": "Wallet frozen successfully"
@@ -141,12 +155,25 @@ async def unfreeze_wallet(
     user_id: str = Query(..., description="The ID of the user whose wallet to unfreeze"),
     db: db_dependency = db_dependency
 ):
+    user_model = db.query(User).filter(User.source_id == user_id).first()
+    if not user_model:
+        raise HTTPException(status_code=404, detail="User not found")
+    
     wallet = db.query(Wallet).join(User).filter(User.source_id == user_id).first()
     if not wallet:
         raise HTTPException(status_code=404, detail="Wallet not found for the specified user")
     
     wallet.is_frozen = False
     db.commit()
+    
+    send_mail(
+        email=user_model.email,
+        subject="Wallet Unfrozen",
+        body= f'''
+        Your wallet has been unfrozen.
+        Please contact support for more information.
+        '''
+    )
     
     return {
         "message": "Wallet unfrozen successfully"
