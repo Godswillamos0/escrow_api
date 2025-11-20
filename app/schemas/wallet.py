@@ -29,6 +29,7 @@ class TransactionRequestDTO(BaseModel):
     amount: float = Field(gt=100.00)
     transaction_type: Optional[TransactionType]
     time: datetime
+    reason: Optional[str] = None
     
     
 class PaymentMetadata(BaseModel):

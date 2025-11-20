@@ -23,3 +23,8 @@ class CancelRequest(BaseModel):
     user_id: str
     escrow_id: str
     
+    
+class DisputeRequest(BaseModel):
+    escrow_id: str
+    reason: Optional[str] = None
+    

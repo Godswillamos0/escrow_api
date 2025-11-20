@@ -1,0 +1,84 @@
+{"id": 5508080634, 
+"domain": "test", 
+"status": "success", 
+"reference": "ufi9ytbzvg", 
+"amount": 199999, 
+"message": None, 
+"gateway_response": "Successful", 
+"paid_at": "2025-11-07T00:55:45.000Z", 
+"created_at": "2025-11-07T00:55:20.000Z", 
+"channel": "card", 
+"currency": "NGN", 
+"ip_address": "102.89.69.111", 
+"metadata": "", 
+"fees_breakdown": None, 
+"log": None, 
+"fees": 3000, 
+"fees_split": None, 
+"authorization": {
+    "authorization_code": "AUTH_y4kucqda5e", 
+    "bin": "408408", 
+    "last4": "4081", 
+    "exp_month": "12", 
+    "exp_year": "2030", 
+    "channel": "card", 
+    "card_type": "visa ", 
+    "bank": "TEST BANK", 
+    "country_code": "NG", 
+    "brand": "visa", 
+    "reusable": True, 
+    "signature": "SIG_9MxVuWzQBsYOpAP7v91z", 
+    "account_name": None
+    }, 
+"customer": {
+    "id": 317421270, 
+    "first_name": None, 
+    "last_name": None, 
+    "email": "amosgecpe2023@futa.edu.ng", 
+    "customer_code": "CUS_9q05xwiskwhmgri", 
+    "phone": None, 
+    "metadata": None, 
+    "risk_action": "default", 
+    "international_format_phone": None
+    }, 
+"plan": {}, 
+"subaccount": {}, 
+"split": {}, 
+"order_id": None, 
+"paidAt": "2025-11-07T00:55:45.000Z", 
+"requested_amount": 199999, 
+"pos_transaction_data": None, 
+"source": {
+    "type": "api", 
+    "source": "merchant_api", 
+    "entry_point": "transaction_initialize", 
+    "identifier": None
+    }
+        }
+
+
+{
+  "user_id": "87b22c64-a101-4d51-bf73-fcda80cc7fc9",
+  "id": "dbe83b95-de4a-45a2-aa16-8cfabe1b832c",
+  "currency": "NGN",
+  "balance": 0,
+  "created_at": "2025-11-10T01:04:00.932000",
+  "updated_at": "2025-11-10T01:04:35",
+  "owner_id": "string",
+  "message": "Wallet created successfully"
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+{"id": 5508133009, "domain": "test", "status": "success", "reference": "iej8o5rgwi", "amount": 199999, "message": None, "gateway_response": "Successful", "paid_at": "2025-11-07T02:09:12.000Z", "created_at": "2025-11-07T02:08:58.000Z", "channel": "card", "currency": "NGN", "ip_address": "102.89.84.152", "metadata": {"id": "123456789"}, "fees_breakdown": None, "log": None, "fees": 3000, "fees_split": None, "authorization": {"authorization_code": "AUTH_dt7u45v5m8", "bin": "408408", "last4": "4081", "exp_month": "12", "exp_year": "2030", "channel": "card", "card_type": "visa ", "bank": "TEST BANK", "country_code": "NG", "brand": "visa", "reusable": True, "signature": "SIG_9MxVuWzQBsYOpAP7v91z", "account_name": None, "receiver_bank_account_number": None, "receiver_bank": None}, "customer": {"id": 317421270, "first_name": None, "last_name": None, "email": "amosgecpe2023@futa.edu.ng", "customer_code": "CUS_9q05xwiskwhmgri", "phone": None, "metadata": None, "risk_action": "default", "international_format_phone": None}, "plan": {}, "subaccount": {}, "split": {}, "order_id": None, "paidAt": "2025-11-07T02:09:12.000Z", "requested_amount": 199999, "pos_transaction_data": None, "source": {"type": "api", "source": "merchant_api", "entry_point": "transaction_initialize", "identifier": None}}

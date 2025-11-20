@@ -15,6 +15,7 @@ class TransactionType(Enum):
     ESCROW_FUND = 'ESCROW_FUND'
     ESCROW_RELEASE = 'ESCROW_RELEASE'
     REFUND = 'REFUND'
+    CREDIT = 'CREDIT'
 
 class TransactionStatus(Enum):
     PENDING = 'PENDING'
@@ -71,6 +72,7 @@ class Wallet(Base):
     currency = Column(SqlEnum(CurrencyCode), nullable=False, default=CurrencyCode.NGN)
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+    is_frozen = Column(Boolean, default=False)
 
     user = relationship("User", back_populates="wallets")
     transactions = relationship("WalletTransaction", back_populates="wallet", cascade="all, delete-orphan")
