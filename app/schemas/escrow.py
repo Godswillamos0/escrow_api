@@ -5,6 +5,7 @@ from decimal import Decimal
 
 
 class UserConfirmation(BaseModel):
+    project_id: str #id from the source
     user_id: str #id from the source
     escrow_id: str #id of the escrow
     confirm_status: bool = Field(default=False)
@@ -13,6 +14,7 @@ class UserConfirmation(BaseModel):
 class TransactionInstance(BaseModel):
     merchant_id: str #id from the source
     client_id: str #id from the source
+    project_id: str #id from the source
     amount: float = Field(gt=0.00)
     
     
@@ -28,6 +30,7 @@ class CancelRequest(BaseModel):
     
 class DisputeRequest(BaseModel):
     escrow_id: str
+    user_id: str #id from the source
     reason: Optional[str] = None
 
 
@@ -44,4 +47,5 @@ class EscrowResponse(BaseModel):
 
     class Config:
         orm_mode = True
+        
     

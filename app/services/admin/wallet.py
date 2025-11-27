@@ -12,6 +12,13 @@ from utils.mail_config import send_mail
 from utils.mail_config import send_mail
 
 
+async def get_all_wallets(
+    db: db_dependency = db_dependency
+):
+    wallets = db.query(Wallet).all()
+    return wallets
+
+
 async def get_wallet_by_user_id(
     user_id: str = Query(..., description="The ID of the user whose wallet to retrieve"),
     db: db_dependency = db_dependency

@@ -2,14 +2,16 @@ from decimal import Decimal
 from db.dependencies import db_dependency
 from fastapi import HTTPException, Depends, Path, Query
 from schemas.escrow import (TransactionInstance, UserConfirmation, 
-                            ReleaseFunds, CancelRequest)
+                            ReleaseFunds, CancelRequest,
+                            DisputeRequest)
 from db.models import (Escrow, 
                        EscrowStatus, 
                        User, 
                        Wallet, 
                        WalletTransaction, 
                        TransactionType, 
-                       TransactionStatus)
+                       TransactionStatus,
+                       EscrowTransaction)
 from db.dependencies import db_dependency
 from datetime import datetime
 from sqlalchemy import or_
@@ -20,6 +22,16 @@ async def create_transaction(
     transaction_instance: TransactionInstance,
     db: db_dependency,
 ):
+    """
+    Docstring for create_transaction
+    
+    :param transaction_instance: Description
+    :type transaction_instance: The transaction instance schema
+        merchant_id
+        client_id
+        project_id 
+        amount should be greater than 0.00
+    """
     try:
         with db.begin():  # atomic transaction
             user_model = db.query(User).filter(User.source_id == transaction_instance.client_id).first()
@@ -86,9 +98,16 @@ async def get_transaction_history(
 
 async def get_transaction_by_id(
     db: db_dependency,
-    escrow_transaction_id = Query(...)
+    project_id = Query(...)
 ):
-    transaction_model = db.query(Escrow).filter(Escrow.id == escrow_transaction_id).first()
+    """
+    Docstring for get_transaction_by_id
+    
+    :param project_id: This is the project ID associated with the 
+        transaction on wordpress
+    :type project_id: str
+    """
+    transaction_model = db.query(Escrow).filter(Escrow.id == project_id).first()
     if not transaction_model:
         raise HTTPException(status_code=404, detail="Transaction not found")
     
@@ -110,6 +129,8 @@ async def client_confirm_transaction(
     db: db_dependency,
     #actor: str = Path(..., description="Either 'client' or 'merchant'")
 ):
+
+    
     user_model = db.query(User).filter(User.source_id == user_confirmation.user_id).first()
     if not user_model:
         raise HTTPException(status_code=404, detail="User does not exist")
@@ -118,9 +139,12 @@ async def client_confirm_transaction(
     check_transaction_cancelability(user_confirmation.escrow_id, db)
     if not escrow_model:
         raise HTTPException(status_code=404, detail="Escrow not found")
+    check_transaction_disputability(db, user_confirmation.escrow_id)
     
     if not escrow_model.client_id == user_model.source_id:
         raise HTTPException(status_code=401, detail="Client not authorized to confirm this transaction")
+    
+    check_transaction_disputability(db, user_confirmation.escrow_id)
     
     escrow_model.client_agree = user_confirmation.confirm_status
     db.commit()
@@ -146,6 +170,8 @@ async def merchant_confirm_transaction(
         raise HTTPException(status_code=404, detail="Escrow not found")
     
     check_transaction_cancelability(user_confirmation.escrow_id, db)
+    check_transaction_disputability(db, user_confirmation.escrow_id)
+
     
     if not escrow_model.merchant_id == user_model.source_id:
         raise HTTPException(status_code=401, detail="Client not authorized to confirm this transaction")
@@ -176,6 +202,7 @@ async def client_release_funds(
         raise HTTPException(status_code=401, detail="Client not authorized")
     
     check_transaction_cancelability(release_funds.escrow_id, db)
+    check_transaction_disputability(db, release_funds.escrow_id)
     
     wallet_model = (
                 db.query(Wallet)
@@ -227,6 +254,7 @@ async def merchant_release_funds(
         raise HTTPException(status_code=401, detail="Merchant not authorized")
     
     check_transaction_cancelability(release_funds.escrow_id, db)
+    check_transaction_disputability(db, release_funds.escrow_id)
     
     
     if not (escrow_model.merchant_agree and escrow_model.client_agree):
@@ -304,3 +332,67 @@ def check_transaction_cancelability(id: str,
     
     if escrow_model.status == EscrowStatus.CANCELLED:
         raise HTTPException (status_code=403, detail="Transaction cancelled.")
+    
+    
+async def dispute_transaction(
+                            db: db_dependency,
+                            dispute_request: DisputeRequest
+                            ):
+    """
+    Docstring for dispute_transaction
+    
+    :param dispute_request: For disputing an escrow transaction
+    :type dispute_request: {escrow_id: str
+                            user_id: str 
+                            reason: // is optional}
+    """
+    
+    
+    user_model = db.query(User).filter(User.source_id == dispute_request.user_id).first()
+    if not user_model:
+        raise HTTPException(status_code=404, detail="User does not exist")
+    
+    escrow_model = db.query(Escrow).filter(Escrow.id == dispute_request.escrow_id).first()
+    if not escrow_model:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+    
+    if escrow_model.client_id != user_model.source_id:
+        if escrow_model.merchant_id != user_model.source_id:
+            raise HTTPException(status_code=401, detail="You are not authorized to dispute this transaction")
+        pass
+    
+    escrow_model.status = EscrowStatus.DISPUTED
+    
+    if escrow_model.status != EscrowStatus.PENDING:
+        raise HTTPException(status_code=400, detail="Only pending transactions can be disputed")
+    
+    dispute_model = EscrowTransaction(
+        escrow_id=dispute_request.escrow_id,
+        amount=escrow_model.amount,
+        reason=dispute_request.reason,
+        status=EscrowStatus.DISPUTED,
+        timestamp=datetime.now()
+    )
+    db.add(dispute_model)
+    db.commit()
+    
+    return {
+        "escrow_id": dispute_model.escrow_id,
+        "reason": dispute_model.reason,
+    }
+    
+    
+def check_transaction_disputability(
+                            db: db_dependency,
+                            escrow_id: str, 
+                            ):
+    escrow_model = db.query(Escrow).filter(Escrow.id == escrow_id).first()
+    
+    if not escrow_model:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+    
+    if escrow_model.status == EscrowStatus.DISPUTED:
+        raise HTTPException (status_code=403, detail="Transaction disputed.")
+    
+    pass
+    

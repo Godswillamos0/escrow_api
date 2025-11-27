@@ -98,6 +98,7 @@ class Escrow(Base):
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     client_id = Column(String(36), ForeignKey('users.source_id'), nullable=False, index=True)#
     merchant_id = Column(String(36), ForeignKey('users.source_id'), nullable=False, index=True)#
+    project_id = Column(String(36), nullable=False, index=True)#
     client_agree = Column(Boolean, default=False)
     merchant_agree = Column(Boolean, default=False)
     amount = Column(Numeric(18, 2), nullable=False)
@@ -107,6 +108,18 @@ class Escrow(Base):
 
     client = relationship("User", foreign_keys=[client_id], back_populates="escrows_as_client")
     merchant = relationship("User", foreign_keys=[merchant_id], back_populates="escrows_as_merchant")
+    
+    
+class EscrowTransaction(Base):
+    __tablename__ = 'escrow_transactions'
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    escrow_id = Column(String(36), ForeignKey('escrow.id'), nullable=False, index=True)
+    amount = Column(Numeric(18, 2), nullable=False)
+    reason = Column(String, nullable=True)
+    status = Column(SqlEnum(TransactionStatus), nullable=False, default=EscrowStatus.PENDING)
+    timestamp = Column(DateTime, default=func.now())
+
+    escrow = relationship("Escrow", backref="transactions")
 
 
 # Withdrawal Bank
