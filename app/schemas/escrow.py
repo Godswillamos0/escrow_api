@@ -19,17 +19,17 @@ class TransactionInstance(BaseModel):
     
     
 class ReleaseFunds(BaseModel):
-    escrow_id: str
+    project_id: str
     user_id: str #id from the source
     
     
 class CancelRequest(BaseModel):
     user_id: str
-    escrow_id: str
+    project_id: str
     
     
 class DisputeRequest(BaseModel):
-    escrow_id: str
+    project_id: str
     user_id: str #id from the source
     reason: Optional[str] = None
 

@@ -20,9 +20,9 @@ from sqlalchemy import asc, or_
 
 
 
-async def get_escrow_by_id(escrow_id: str = Query(..., description="The ID of the escrow transaction to retrieve"),
+async def get_escrow_by_id(project_id: str = Query(..., description="The ID of the escrow transaction to retrieve"),
                       db=Depends(db_dependency)) -> dict:
-    escrow = db.query(Escrow).filter(Escrow.id == escrow_id).first()
+    escrow = db.query(Escrow).filter(Escrow.project_id == project_id).first()
     if not escrow:
         raise HTTPException(status_code=404, detail="Escrow transaction not found")
     return {
@@ -44,7 +44,7 @@ async def get_all_transactions(db=Depends(db_dependency)):
 
 
 async def cancel_transaction(request: CancelRequest, db=Depends(db_dependency)):
-    escrow = db.query(Escrow).filter(Escrow.id == request.escrow_id).first()
+    escrow = db.query(Escrow).filter(Escrow.project_id == request.project_id).first()
     if not escrow:
         raise HTTPException(status_code=404, detail="Escrow transaction not found")
     
@@ -59,8 +59,8 @@ async def cancel_transaction(request: CancelRequest, db=Depends(db_dependency)):
         }
 
 
-async def dispute_transaction(escrow_id: str, reason: str, db=Depends(db_dependency)):
-    escrow = db.query(Escrow).filter(Escrow.id == escrow_id).first()
+async def dispute_transaction(project_id: str, reason: str, db=Depends(db_dependency)):
+    escrow = db.query(Escrow).filter(Escrow.project_id == project_id).first()
     if not escrow:
         raise HTTPException(status_code=404, detail="Escrow transaction not found")
     
@@ -83,7 +83,7 @@ async def get_all_disputed_transactions(db: db_dependency):
 
 async def force_release_funds(request: ReleaseFunds, 
                               db: db_dependency):
-    escrow = db.query(Escrow).filter(Escrow.id == request.escrow_id).first()
+    escrow = db.query(Escrow).filter(Escrow.project_id == request.project_id).first()
     if not escrow:
         raise HTTPException(status_code=404, detail="Escrow transaction not found")
     
@@ -110,7 +110,7 @@ async def force_return_funds(request: ReleaseFunds,
         raise HTTPException(status_code=404, detail="User not found")
     
 
-    escrow = db.query(Escrow).filter(Escrow.id == request.escrow_id).first()
+    escrow = db.query(Escrow).filter(Escrow.project_id == request.project_id).first()
     if not escrow:
         raise HTTPException(status_code=404, detail="Escrow transaction not found")
     if escrow.status != EscrowStatus.FUNDED:
@@ -131,10 +131,10 @@ async def force_return_funds(request: ReleaseFunds,
 
 
 async def resolve_dispute(
-    escrow_id: str, 
+    project_id: str, 
     db: db_dependency
     ):
-    escrow = db.query(Escrow).filter(Escrow.id == escrow_id).first()
+    escrow = db.query(Escrow).filter(Escrow.project_id == project_id).first()
     if not escrow:
         raise HTTPException(status_code=404, detail="Escrow transaction not found")
     
