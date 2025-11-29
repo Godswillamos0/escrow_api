@@ -7,7 +7,9 @@ from services.escrow import (get_transaction_by_id,
                              merchant_confirm_transaction,
                              client_release_funds,
                              merchant_release_funds,
-                             update_transactions)
+                             update_transactions,
+                             dispute_transaction,
+                             )
 
 router = APIRouter(
     prefix="/escrow",
@@ -41,7 +43,7 @@ router.post("/merchant_release_funds", status_code=status.HTTP_200_OK)(merchant_
 router.delete("/cancel_transaction", status_code=status.HTTP_200_OK)(cancel_transaction)
 
 
-
+router.post("/dispute_transaction", status_code=status.HTTP_200_OK)(dispute_transaction)    
 
 
 
