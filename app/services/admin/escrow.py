@@ -38,7 +38,7 @@ async def get_escrow_by_id(project_id: str = Query(..., description="The ID of t
     }
 
 
-async def get_all_transactions(db=Depends(db_dependency)):
+async def get_all_transactions(db:db_dependency):
     escrows = db.query(Escrow).all()
     return escrows
 
@@ -59,7 +59,7 @@ async def cancel_transaction(request: CancelRequest, db=Depends(db_dependency)):
         }
 
 
-async def dispute_transaction(project_id: str, reason: str, db=Depends(db_dependency)):
+async def dispute_transaction(project_id: str, reason: str, db:db_dependency):
     escrow = db.query(Escrow).filter(Escrow.project_id == project_id).first()
     if not escrow:
         raise HTTPException(status_code=404, detail="Escrow transaction not found")
