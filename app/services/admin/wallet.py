@@ -20,8 +20,8 @@ async def get_all_wallets(
 
 
 async def get_wallet_by_user_id(
-    user_id: str = Query(..., description="The ID of the user whose wallet to retrieve"),
-    db: db_dependency = db_dependency
+    db: db_dependency,
+    user_id: str = Query(..., description="The ID of the user whose wallet to retrieve")
 ):
     wallet = db.query(Wallet).join(User).filter(User.source_id == user_id).first()
     if not wallet:
@@ -108,8 +108,8 @@ async def debit_wallet(
     
     
 async def get_wallet_transactions(
-    user_id: str = Query(..., description="The ID of the user whose wallet transactions to retrieve"),
-    db: db_dependency = db_dependency
+    db: db_dependency,
+    user_id: str = Query(..., description="The ID of the user whose wallet transactions to retrieve")
 ):
     wallet = db.query(Wallet).join(User).filter(User.source_id == user_id).first()
     if not wallet:
@@ -130,8 +130,8 @@ async def update_wallet(
 
 #post request
 async def freeze_wallet(
-    user_id: str = Query(..., description="The ID of the user whose wallet to freeze"),
-    db: db_dependency = db_dependency
+    db: db_dependency = db_dependency,
+    user_id: str = Query(..., description="The ID of the user whose wallet to freeze")
 ):
     
     user_model = db.query(User).filter(User.source_id == user_id).first()
@@ -159,8 +159,8 @@ async def freeze_wallet(
     
     
 async def unfreeze_wallet(
-    user_id: str = Query(..., description="The ID of the user whose wallet to unfreeze"),
-    db: db_dependency = db_dependency
+    db: db_dependency,
+    user_id: str = Query(..., description="The ID of the user whose wallet to unfreeze")
 ):
     user_model = db.query(User).filter(User.source_id == user_id).first()
     if not user_model:
