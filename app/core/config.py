@@ -7,7 +7,7 @@ PAYSTACK_SECRET = os.getenv("PAYSTACK_SECRET_KEY", "sk_test_...")
 PAYSTACK_BASE_URL = os.getenv("PAYSTACK_BASE_URL", "https://api.paystack.co")
 
 
-SQL_DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./test.db")
+DATABASE_URL = os.getenv("POSTGRES_DATABASE_URL")
 SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = os.getenv("ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES = os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES")

@@ -57,7 +57,7 @@ async def create_transaction(
             db.add(escrow_model)
 
         return {
-            "escrow_id": escrow_model.id,
+            "project_id": escrow_model.project_id,
             "status": escrow_model.status,
             "amount": escrow_model.amount,
             "message": "Transaction created successfully"
@@ -92,7 +92,7 @@ async def get_transaction_history(
     
     return [
         {
-        "id": transaction.id,
+        "project_id": transaction.project_id,
         "status": transaction.status,
         "amount": transaction.amount,
         "created_at": transaction.created_at,
@@ -117,7 +117,7 @@ async def get_transaction_by_id(
         raise HTTPException(status_code=404, detail="Transaction not found")
     
     return {
-        "id": transaction_model.id,
+        "project_id": transaction_model.project_id,
         "status": transaction_model.status,
         "amount": transaction_model.amount,
         "created_at": transaction_model.created_at,
@@ -155,7 +155,7 @@ async def client_confirm_transaction(
     db.commit()
     
     return {
-        "id": escrow_model.id,
+        "project_id": escrow_model.project_id,
         "project_id": escrow_model.project_id,
         "status": escrow_model.status,
         "message": "Transaction confirmed successfully"
@@ -186,7 +186,7 @@ async def merchant_confirm_transaction(
     db.commit()
     
     return {
-        "id": escrow_model.id,
+        "project_id": escrow_model.project_id,
         "status": escrow_model.status,
         "message": "Transaction confirmed successfully"
     }
@@ -236,7 +236,7 @@ async def client_release_funds(
     escrow_model.status = EscrowStatus.FUNDED
     db.commit()
     return {
-        "id": escrow_model.id,
+        "project_id": escrow_model.project_id,
         "status": escrow_model.status,
         "message": "Funds released successfully"
     }
@@ -286,7 +286,7 @@ async def merchant_release_funds(
     escrow_model.status = EscrowStatus.RELEASED
     db.commit()
     return {
-        "id": escrow_model.id,
+        "project_id": escrow_model.project_id,
         "status": escrow_model.status,
         "message": "Funds released successfully"
     }
@@ -321,7 +321,7 @@ async def cancel_transaction(
     db.commit()
     
     return {
-        "id": escrow_model.id,
+        "project_id": escrow_model.project_id,
         "status": escrow_model.status,
         "message": "Transaction cancelled successfully"
     }
@@ -383,7 +383,7 @@ async def dispute_transaction(
     db.commit()
     
     return {
-        "escrow_id": dispute_model.project_id,
+        "escrow_id": dispute_request.project_id,
         "reason": dispute_model.reason,
     }
     
