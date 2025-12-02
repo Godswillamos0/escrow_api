@@ -99,8 +99,8 @@ class Escrow(Base):
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
 
     # FIXED HERE
-    client_id = Column(String(36), ForeignKey('users.id'), nullable=False, index=True)
-    merchant_id = Column(String(36), ForeignKey('users.id'), nullable=False, index=True)
+    client_id = Column(String(36), ForeignKey('users.source_id'), nullable=False, index=True)
+    merchant_id = Column(String(36), ForeignKey('users.source_id'), nullable=False, index=True)
 
     project_id = Column(String(36), nullable=False, index=True)
     client_agree = Column(Boolean, default=False)
