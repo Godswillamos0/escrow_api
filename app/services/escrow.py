@@ -146,7 +146,7 @@ async def client_confirm_transaction(
         raise HTTPException(status_code=404, detail="Escrow not found")
     check_transaction_disputability(db, escrow_model.id)
     
-    if not escrow_model.client_id == user_model.source_id:
+    if not escrow_model.client_id == user_model.id:
         raise HTTPException(status_code=401, detail="Client not authorized to confirm this transaction")
     
     check_transaction_disputability(db, escrow_model.id)
@@ -179,7 +179,7 @@ async def merchant_confirm_transaction(
     check_transaction_disputability(db, escrow_model.id)
 
     
-    if not escrow_model.merchant_id == user_model.source_id:
+    if not escrow_model.merchant_id == user_model.id:
         raise HTTPException(status_code=401, detail="Client not authorized to confirm this transaction")
     
     escrow_model.merchant_agree = user_confirmation.confirm_status
