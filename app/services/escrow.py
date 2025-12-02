@@ -47,8 +47,8 @@ async def create_transaction(
                 raise HTTPException(status_code=404, detail="Merchant not found")
 
             escrow_model = Escrow(
-                client_id=transaction_instance.client_id,
-                merchant_id=transaction_instance.merchant_id,
+                client_id=user_model.id,
+                merchant_id=merchant_model.id,
                 amount=transaction_instance.amount,
                 status=EscrowStatus.PENDING, #change to funded.
                 created_at=datetime.now(),
@@ -204,7 +204,7 @@ async def client_release_funds(
     if not escrow_model:
         raise HTTPException(status_code=404, detail="Transaction not found")
     
-    if user_model.source_id != escrow_model.client_id:
+    if user_model.id != escrow_model.client_id:
         raise HTTPException(status_code=401, detail="Client not authorized")
     
     check_transaction_cancelability(escrow_model.id, db)
@@ -256,7 +256,7 @@ async def merchant_release_funds(
     if not escrow_model:
         raise HTTPException(status_code=404, detail="Transaction not found")
     
-    if user_model.source_id != escrow_model.merchant_id:
+    if user_model.id != escrow_model.merchant_id:
         raise HTTPException(status_code=401, detail="Merchant not authorized")
     
     check_transaction_cancelability(escrow_model.id, db)
