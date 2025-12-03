@@ -85,10 +85,10 @@ async def get_transaction_history(
         raise HTTPException(status_code=404, detail="User not found")
     
     if actor == "merchant":
-        transaction_model = db.query(Escrow).filter(Escrow.merchant_id == user_model.source_id).all()
+        transaction_model = db.query(Escrow).filter(Escrow.merchant_id == user_model.id).all()
         
     elif actor == "client":
-        transaction_model = db.query(Escrow).filter(Escrow.client_id == user_model.source_id).all()
+        transaction_model = db.query(Escrow).filter(Escrow.client_id == user_model.id).all()
     
     return [
         {
