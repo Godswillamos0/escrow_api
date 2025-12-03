@@ -68,39 +68,47 @@ async def paystack_webhook_handler(request: Request,
     print(f"Received Paystack event: {event_type}")
 
     if event_type == "charge.success":
-        # Process a successful payment
         transaction_data = event_payload.get("data")
         reference = transaction_data.get("reference")
-        email = transaction_data.get("customer", {}).get("email")
         amount = transaction_data.get("amount")
         metadata = transaction_data.get("metadata")
-        source_id = metadata.get("source_id")
-        username = metadata.get("user_id")
         wallet_id = metadata.get("wallet_id")
-        
-        # **ACTION:** Update your database
-        transaction_model = db.query(WalletTransaction).filter(WalletTransaction.reference_code==reference).first()
-        transaction_model.status = TransactionStatus.SUCCESS
-        
-        # Add to wallet
-        wallet_model = db.query(Wallet).filter(Wallet.id==wallet_id).first()
-        wallet_model.updated_at = datetime.utcnow()
-        wallet_model.balance += Decimal(amount) / Decimal(100)
-        db.add(wallet_model)
-        
-        db.commit()
-        
-        # send confirmation emails,
+        email = transaction_data.get("customer", {}).get("email")
+
+        txn = db.query(WalletTransaction).filter(
+            WalletTransaction.reference_code == reference
+        ).first()
+
+        if not txn:
+            print("⚠ No matching transaction found")
+            return {"status": "ignored"}
+
+        # PREVENT DOUBLE PROCESSING
+        if txn.status == TransactionStatus.SUCCESS:
+            print("⚠ Transaction already processed, ignoring.")
+            return {"status": "success", "message": "Already processed"}
+
+        # PROCESS TRANSACTION
+        txn.status = TransactionStatus.SUCCESS
+
+        wallet = db.query(Wallet).filter(Wallet.id == wallet_id).first()
+        wallet.balance += Decimal(amount) / Decimal(100)
+        wallet.updated_at = datetime.utcnow()
+
+        db.commit()   # commit BEFORE email or long work
+
+        # Send email AFTER commit
         await send_mail(
             email=email,
             subject="Payment Confirmation",
-            body= f'''
-            You just added funds to your wallet.
-            Amount: {amount/100:.2f} 
-            Reference: {reference}
-            Metadata: {metadata}
-            '''
+            body=f"""
+                Payment received!
+                Amount: {amount/100:.2f}
+                Reference: {reference}
+            """
         )
+
+        return {"status": "success"}
         
         
     elif event_type == "charge.failed":
