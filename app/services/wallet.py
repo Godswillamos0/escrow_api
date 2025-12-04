@@ -29,6 +29,8 @@ async def create_wallet(wallet_request: WalletRequestDTO,
         db.commit()
         
     # create wallet
+    if db.query(Wallet).filter(Wallet.owner_id == user_model.id).first():
+        raise HTTPException(status_code=400, detail="Wallet already exists")
     wallet_model = Wallet(
         owner_id = user_model.id,
         currency = wallet_request.currency,
