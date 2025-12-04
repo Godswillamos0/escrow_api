@@ -45,6 +45,44 @@ async def get_all_transactions(db:db_dependency):
     return escrows
 
 
+async def get_all_transactions(
+    db: db_dependency,
+):
+    transactions = (
+            db.query(Escrow)
+            .all()
+        )
+
+    # Build response per transaction
+    results = []
+    
+    for transaction in transactions:
+        
+        # Filter finished milestones for this specific transaction
+        finished_milestones = [
+            {
+                "id": m.id,
+                "key": m.key,
+                "name": m.milestone_name,
+                "amount": float(m.amount),
+                "description": m.description,
+                "finished": m.finished
+            }
+            for m in transaction.milestones
+        ]
+
+        results.append({
+            "project_id": transaction.project_id,
+            "status": transaction.status.value,
+            "amount": float(transaction.amount),
+            "created_at": transaction.created_at,
+            "finalized_at": transaction.finalized_at,
+            "milestones": finished_milestones or None
+        })
+    
+    return results
+
+
 async def cancel_transaction(request: CancelRequest, 
                              db:db_dependency):
     escrow = db.query(Escrow).filter(Escrow.project_id == request.project_id).first()

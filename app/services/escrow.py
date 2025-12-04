@@ -174,57 +174,108 @@ async def client_confirm_milestone(
     }
     
     
-#get request
 async def get_transaction_history(
     db: db_dependency,
     user_id = Query(...),
     actor = Query(...)
 ):
     if actor not in ["merchant", "client"]:
-        raise HTTPException(status_code=400, detail="Invalid actor type, 'client' or 'merchant' expected")
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid actor type, 'client' or 'merchant' expected"
+        )
     
+    # Fetch user
     user_model = db.query(User).filter(User.source_id == user_id).first()
     if not user_model:
         raise HTTPException(status_code=404, detail="User not found")
     
+    # Fetch transactions based on role
     if actor == "merchant":
-        transaction_model = db.query(Escrow).filter(Escrow.merchant_id == user_model.id).all()
-        
-    elif actor == "client":
-        transaction_model = db.query(Escrow).filter(Escrow.client_id == user_model.id).all()
+        transactions = (
+            db.query(Escrow)
+            .filter(Escrow.merchant_id == user_model.id)
+            .all()
+        )
+    else:  # actor == "client"
+        transactions = (
+            db.query(Escrow)
+            .filter(Escrow.client_id == user_model.id)
+            .all()
+        )
+
+    # Build response per transaction
+    results = []
     
-    return [
-        {
-        "project_id": transaction.project_id,
-        "status": transaction.status,
-        "amount": transaction.amount,
-        "created_at": transaction.created_at,
-        "finalized_at": transaction.finalized_at
-    } 
-        for transaction in transaction_model]
+    for transaction in transactions:
+        
+        # Filter finished milestones for this specific transaction
+        finished_milestones = [
+            {
+                "id": m.id,
+                "key": m.key,
+                "name": m.milestone_name,
+                "amount": float(m.amount),
+                "description": m.description,
+                "finished": m.finished
+            }
+            for m in transaction.milestones
+        ]
+
+        results.append({
+            "project_id": transaction.project_id,
+            "status": transaction.status.value,
+            "amount": float(transaction.amount),
+            "created_at": transaction.created_at,
+            "finalized_at": transaction.finalized_at,
+            "milestones": finished_milestones or None
+        })
+    
+    return results
 
 
 async def get_transaction_by_id(
     db: db_dependency,
-    project_id = Query(...)
+    project_id: str = Query(...)
 ):
     """
-    Docstring for get_transaction_by_id
-    
-    :param project_id: This is the project ID associated with the 
-        transaction on wordpress
-    :type project_id: str
+    Fetch escrow transaction by project_id and return
+    all finished milestones.
     """
-    transaction_model = db.query(Escrow).filter(Escrow.project_id == project_id).first()
+
+    # 1. Get the escrow by project_id
+    transaction_model = (
+        db.query(Escrow)
+        .filter(Escrow.project_id == project_id)
+        .first()
+    )
+
     if not transaction_model:
         raise HTTPException(status_code=404, detail="Transaction not found")
-    
+
+    # 2. Filter milestones where finished == True
+    finished_milestones = [
+        {
+            "id": m.id,
+            "key": m.key,
+            "name": m.milestone_name,
+            "amount": float(m.amount),  # Or use str(m.amount)
+            "description": m.description,
+            "finished": m.finished
+        }
+        for m in transaction_model.milestones
+        if m.finished is True
+    ]
+
+    # 3. Return the escrow + the milestone data
     return {
         "project_id": transaction_model.project_id,
         "status": transaction_model.status,
-        "amount": transaction_model.amount,
+        "amount": float(transaction_model.amount),  # JSON can't serialize Decimal
         "created_at": transaction_model.created_at,
-        "finalized_at": transaction_model.finalized_at
+        "finalized_at": transaction_model.finalized_at,
+        "milestones": finished_milestones or None
+
     }
 
 
