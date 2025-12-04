@@ -102,7 +102,9 @@ class Escrow(Base):
     client_id = Column(String(36), ForeignKey('users.id'), nullable=False, index=True)
     merchant_id = Column(String(36), ForeignKey('users.id'), nullable=False, index=True)
 
-    project_id = Column(String(36), nullable=False, index=True)
+    project_id = Column(String(36), nullable=False, index=True, unique=True)
+    title = Column(String, nullable=False)
+    description = Column(String, nullable=True)
     client_agree = Column(Boolean, default=False)
     merchant_agree = Column(Boolean, default=False)
     amount = Column(Numeric(18, 2), nullable=False)
