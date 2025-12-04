@@ -106,14 +106,29 @@ class Escrow(Base):
     client_agree = Column(Boolean, default=False)
     merchant_agree = Column(Boolean, default=False)
     amount = Column(Numeric(18, 2), nullable=False)
-    status = Column(SqlEnum(EscrowStatus), nullable=False, default=EscrowStatus.FUNDED)
+    status = Column(SqlEnum(EscrowStatus), nullable=False, default=EscrowStatus.PENDING)
     created_at = Column(DateTime, default=func.now())
     finalized_at = Column(DateTime, nullable=True)
 
     client = relationship("User", foreign_keys=[client_id], back_populates="escrows_as_client")
     merchant = relationship("User", foreign_keys=[merchant_id], back_populates="escrows_as_merchant")
-
     
+    milestones = relationship("Milestones", back_populates="escrow", cascade="all, delete-orphan")
+    
+    
+class Milestones(Base):
+    __tablename__ = 'milestones'
+
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    key = Column(String, nullable=False)
+    escrow_id = Column(String, ForeignKey('escrow.id'), nullable=False, index=True)
+    milestone_name = Column(String, nullable=False)
+    amount = Column(Numeric(18, 2), nullable=False)
+    description = Column(String, nullable=True)
+    finished=Column(Boolean, default=False)
+    
+    escrow = relationship("Escrow", back_populates="milestones")
+
     
 class EscrowTransaction(Base):
     __tablename__ = 'escrow_transactions'

@@ -8,21 +8,20 @@ class UserConfirmation(BaseModel):
     project_id: str #id from the source
     user_id: str #id from the source
     confirm_status: bool = Field(default=False)
+    milestone_key: Optional[str] = Field(default=None)
     
 
 class Milestone(BaseModel):
-    project_id: str
+    key: str
     milestone_name: str
     description: Optional[str] = None
-    amount: float = Field(gt=0.00)
-    due_date: datetime
+    amount: Decimal = Field(gt=0.00)
     
 class UpdateMilestone(BaseModel):
     milestone_id: str
     milestone_name: Optional[str] = None
     description: Optional[str] = None
-    amount: Optional[float] = Field(None, gt=0.00)
-    due_date: Optional[datetime] = None
+    amount: Optional[Decimal] = Field(None, gt=0.00)
     
 class DeleteMilestone(BaseModel):
     milestone_id: str
@@ -32,8 +31,8 @@ class TransactionInstance(BaseModel):
     merchant_id: str #id from the source
     client_id: str #id from the source
     project_id: str #id from the source
-    amount: float = Field(gt=0.00)
-    milestone: List[dict]
+    amount: Decimal = Field(gt=0.00)
+    milestone: Optional[List[Milestone]]
     
     model_config = {
         "json_schema_extra": {
@@ -44,16 +43,16 @@ class TransactionInstance(BaseModel):
                 "amount": 100.00,
                 "milestone": [
                     {
+                        "key": "milestone_id",
                         "milestone_name": "Milestone 1",
                         "description": "Description for Milestone 1",
-                        "amount": 50.00,
-                        "due_date": "2023-09-30T00:00:00"
+                        "amount": 50.00
                     },
                     {
+                        "key": "milestone_id",
                         "milestone_name": "Milestone 2",
                         "description": "Description for Milestone 2",
-                        "amount": 30.00,
-                        "due_date": "2023-10-15T00:00:00"
+                        "amount": 30.00
                     }
                 ]
             }
