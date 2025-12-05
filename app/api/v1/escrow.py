@@ -6,9 +6,7 @@ from services.escrow import (get_transaction_by_id,
                              client_confirm_milestone,
                              cancel_transaction,
                              client_confirm_transaction,
-                             merchant_confirm_transaction,
                              client_release_funds,
-                             merchant_release_funds,
                              update_transactions,
                              dispute_transaction,
                              )
@@ -31,12 +29,6 @@ router.post("/client_confirm_milestone", status_code=status.HTTP_200_OK)(client_
 router.post("/client_release_funds", status_code=status.HTTP_200_OK)(client_release_funds)
 
 router.post("/client_confirm", status_code=status.HTTP_200_OK)(client_confirm_transaction)
-
-router.post("/merchant_confirm", status_code=status.HTTP_200_OK)(merchant_confirm_transaction)
-
-router.put("/update_transactions", status_code=status.HTTP_200_OK)(update_transactions)
-
-router.post("/merchant_release_funds", status_code=status.HTTP_200_OK)(merchant_release_funds)
 
 router.delete("/cancel_transaction", status_code=status.HTTP_200_OK)(cancel_transaction)
 

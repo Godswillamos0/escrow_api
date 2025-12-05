@@ -1,7 +1,7 @@
 from decimal import Decimal
 from db.dependencies import db_dependency
 from fastapi import HTTPException, Depends, Path, Query
-from schemas.escrow import (TransactionInstance, UserConfirmation, 
+from schemas.escrow import (TransactionInstance, TransactionMilestoneInstance, UserConfirmation, 
                             ReleaseFunds, CancelRequest,
                             DisputeRequest, Milestone)
 from db.models import (Escrow, 
@@ -72,7 +72,7 @@ async def create_transaction(
     
     
 async def create_milestone_transaction(
-    transaction_instance: TransactionInstance,
+    transaction_instance: TransactionMilestoneInstance,
     db: db_dependency,
 ):
     user_model = db.query(User).filter(User.source_id == transaction_instance.client_id).first()
@@ -289,53 +289,31 @@ async def client_confirm_transaction(
     #actor: str = Path(..., description="Either 'client' or 'merchant'")
 ):
 
-    
     user_model = db.query(User).filter(User.source_id == user_confirmation.user_id).first()
     if not user_model:
         raise HTTPException(status_code=404, detail="User does not exist")
     
     escrow_model = db.query(Escrow).filter(Escrow.project_id == user_confirmation.project_id).first()
     check_transaction_cancelability(escrow_model.id, db)
+    
+    if escrow_model.status != EscrowStatus.FUNDED:
+        raise HTTPException(status_code=400, detail="Transaction not funded or has been released")
+    
     if not escrow_model:
         raise HTTPException(status_code=404, detail="Escrow not found")
-    check_transaction_disputability(db, escrow_model.id)
     
     if not escrow_model.client_id == user_model.id:
         raise HTTPException(status_code=401, detail="Client not authorized to confirm this transaction")
     
     check_transaction_disputability(db, escrow_model.id)
+    merchant_wallet = db.query(Wallet).filter(Wallet.owner_id == escrow_model.merchant_id).first()
     
     escrow_model.client_agree = user_confirmation.confirm_status
-    db.commit()
     
-    return {
-        "project_id": escrow_model.project_id,
-        "status": escrow_model.status,
-        "message": "Transaction confirmed successfully"
-    }
-    
-    
-async def merchant_confirm_transaction(
-    user_confirmation: UserConfirmation,
-    db: db_dependency,
-    #actor: str = Path(..., description="Either 'client' or 'merchant'")
-):
-    user_model = db.query(User).filter(User.source_id == user_confirmation.user_id).first()
-    if not user_model:
-        raise HTTPException(status_code=404, detail="User does not exist")
-    
-    escrow_model = db.query(Escrow).filter(Escrow.project_id == user_confirmation.project_id).first()
-    if not escrow_model:
-        raise HTTPException(status_code=404, detail="Escrow not found")
-    
-    check_transaction_cancelability(escrow_model.id, db)
-    check_transaction_disputability(db, escrow_model.id)
-
-    
-    if not escrow_model.merchant_id == user_model.id:
-        raise HTTPException(status_code=401, detail="Client not authorized to confirm this transaction")
-    
-    escrow_model.merchant_agree = user_confirmation.confirm_status
+    if escrow_model.client_agree:
+        merchant_wallet.balance += escrow_model.amount
+        escrow_model.status = EscrowStatus.RELEASED
+        escrow_model.finalized_at = datetime.now()
     db.commit()
     
     return {
@@ -394,60 +372,6 @@ async def client_release_funds(
         "message": "Funds released successfully"
     }
     
-    
-async def merchant_release_funds(
-    db: db_dependency,
-    release_funds: ReleaseFunds
-):
-    
-    user_model = db.query(User).filter(User.source_id == release_funds.user_id).first()
-    if not user_model:
-        raise HTTPException(status_code=404, detail="User does not exist")
-
-    escrow_model = db.query(Escrow).filter(Escrow.project_id == release_funds.project_id).first()
-    
-    if not escrow_model:
-        raise HTTPException(status_code=404, detail="Transaction not found")
-    
-    if user_model.id != escrow_model.merchant_id:
-        raise HTTPException(status_code=401, detail="Merchant not authorized")
-    
-    check_transaction_cancelability(escrow_model.id, db)
-    check_transaction_disputability(db, escrow_model.id)
-    
-    
-    if not (escrow_model.merchant_agree and escrow_model.client_agree):
-        raise HTTPException(status_code=400, detail="Transaction not confirmed by both parties")
-    
-    if escrow_model.status != EscrowStatus.FUNDED:
-        raise HTTPException(status_code=400, detail="Transaction is not pending")
-    
-    wallet_model = db.query(Wallet).filter(Wallet.owner_id == user_model.id).first()
-
-    wallet_model.balance += escrow_model.amount
-    escrow_model.finalized_at = datetime.now()
-    #add to wallet transaction
-    txn = WalletTransaction(
-        wallet_id=wallet_model.id,
-        amount=escrow_model.amount,
-        transaction_type=TransactionType.ESCROW_RELEASE,
-        status=TransactionStatus.SUCCESS,
-        timestamp=datetime.now()
-    )
-    db.add(txn)
-    
-    escrow_model.status = EscrowStatus.RELEASED
-    db.commit()
-    return {
-        "project_id": escrow_model.project_id,
-        "status": escrow_model.status,
-        "message": "Funds released successfully"
-    }
-
-    
-
-
-
 
 async def update_transactions():
     pass

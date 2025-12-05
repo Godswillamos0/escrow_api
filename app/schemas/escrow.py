@@ -27,7 +27,7 @@ class DeleteMilestone(BaseModel):
     milestone_id: str
     project_id: str
 
-class TransactionInstance(BaseModel):
+class TransactionMilestoneInstance(BaseModel):
     merchant_id: str #id from the source
     client_id: str #id from the source
     project_id: str #id from the source
@@ -58,6 +58,13 @@ class TransactionInstance(BaseModel):
             }
         }
     }
+    
+    
+class TransactionInstance(BaseModel):
+    merchant_id: str #id from the source
+    client_id: str #id from the source
+    project_id: str #id from the source
+    amount: Decimal = Field(gt=0.00)
     
     
 class ReleaseFunds(BaseModel):
