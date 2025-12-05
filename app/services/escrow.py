@@ -294,7 +294,7 @@ async def client_confirm_transaction(
         raise HTTPException(status_code=404, detail="User does not exist")
     
     escrow_model = db.query(Escrow).filter(Escrow.project_id == user_confirmation.project_id).first()
-    check_transaction_cancelability(escrow_model.id, db)
+    check_transaction_cancelability(escrow_model.project_id, db)
     
     if escrow_model.status != EscrowStatus.FUNDED:
         raise HTTPException(status_code=400, detail="Transaction not funded or has been released")
@@ -305,7 +305,7 @@ async def client_confirm_transaction(
     if not escrow_model.client_id == user_model.id:
         raise HTTPException(status_code=401, detail="Client not authorized to confirm this transaction")
     
-    check_transaction_disputability(db, escrow_model.id)
+    check_transaction_disputability(db, escrow_model.project_id)
     merchant_wallet = db.query(Wallet).filter(Wallet.owner_id == escrow_model.merchant_id).first()
     
     escrow_model.client_agree = user_confirmation.confirm_status
@@ -338,8 +338,8 @@ async def client_release_funds(
     if user_model.id != escrow_model.client_id:
         raise HTTPException(status_code=401, detail="Client not authorized")
     
-    check_transaction_cancelability(escrow_model.id, db)
-    check_transaction_disputability(db, escrow_model.id)
+    check_transaction_cancelability(escrow_model.project_id, db)
+    check_transaction_disputability(db, escrow_model.project_id)
     
     wallet_model = (
                 db.query(Wallet)
@@ -408,7 +408,7 @@ async def cancel_transaction(
     
 def check_transaction_cancelability(id: str, 
                              db: db_dependency):
-    escrow_model = db.query(Escrow).filter(Escrow.id == id).first()
+    escrow_model = db.query(Escrow).filter(Escrow.project_id == id).first()
     
     if not escrow_model:
         raise HTTPException(status_code=404, detail="Transaction not found")
@@ -467,9 +467,9 @@ async def dispute_transaction(
     
 def check_transaction_disputability(
                             db: db_dependency,
-                            escrow_id: str, 
+                            project_id: str, 
                             ):
-    escrow_model = db.query(Escrow).filter(Escrow.id == escrow_id).first()
+    escrow_model = db.query(Escrow).filter(Escrow.project_id == project_id).first()
     
     if not escrow_model:
         raise HTTPException(status_code=404, detail="Transaction not found")
