@@ -1,8 +1,8 @@
 from fastapi import APIRouter, status
-from services.escrow import (get_transaction_by_id, 
+from services.escrow import (#create_milestone_transaction, 
+                             get_transaction_by_id, 
                              get_transaction_history, 
                              create_transaction,
-                             create_milestone_transaction,
                              client_confirm_milestone,
                              cancel_transaction,
                              client_confirm_transaction,
@@ -22,7 +22,7 @@ router.get("/get_transaction", status_code=status.HTTP_200_OK)(get_transaction_b
 
 router.post("/create_transaction", status_code=status.HTTP_201_CREATED)(create_transaction)
 
-router.post("/create_milestone_transaction", status_code=status.HTTP_201_CREATED)(create_milestone_transaction)
+#router.post("/create_milestone_transaction", status_code=status.HTTP_201_CREATED)(create_milestone_transaction)
 
 router.post("/client_confirm_milestone", status_code=status.HTTP_200_OK)(client_confirm_milestone)
 

@@ -10,6 +10,16 @@ class UserConfirmation(BaseModel):
     confirm_status: bool = Field(default=False)
     milestone_key: Optional[str] = Field(default=None)
     
+    
+class UserConfirmMilestone(BaseModel):
+    project_id: str #id from the source
+    user_id: str #id from the source
+    milestone_key: str
+    confirm_status: bool = Field(default=False)
+    title: str
+    description: str
+    amount: Decimal= Field(gt=0.00)
+ 
 
 class Milestone(BaseModel):
     key: str
@@ -41,20 +51,7 @@ class TransactionMilestoneInstance(BaseModel):
                 "client_id": "client_id",
                 "project_id": "project_id",
                 "amount": 100.00,
-                "milestone": [
-                    {
-                        "key": "milestone_id",
-                        "milestone_name": "Milestone 1",
-                        "description": "Description for Milestone 1",
-                        "amount": 50.00
-                    },
-                    {
-                        "key": "milestone_id",
-                        "milestone_name": "Milestone 2",
-                        "description": "Description for Milestone 2",
-                        "amount": 30.00
-                    }
-                ]
+                "milestone": []
             }
         }
     }
