@@ -96,13 +96,12 @@ class WalletTransaction(Base):
 class Escrow(Base):
     __tablename__ = 'escrow'
     
-    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    project_id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
 
     # FIXED HERE
     client_id = Column(String(36), ForeignKey('users.id'), nullable=False, index=True)
     merchant_id = Column(String(36), ForeignKey('users.id'), nullable=False, index=True)
 
-    project_id = Column(String(36), nullable=False, index=True, unique=True)
     client_agree = Column(Boolean, default=False)
     merchant_agree = Column(Boolean, default=False)
     amount = Column(Numeric(18, 2), nullable=False)
@@ -121,7 +120,7 @@ class Milestones(Base):
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     key = Column(String, nullable=False)
-    escrow_id = Column(String, ForeignKey('escrow.id'), nullable=False, index=True)
+    escrow_id = Column(String, ForeignKey('escrow.project_id'), nullable=False, index=True)
     milestone_name = Column(String, nullable=False)
     amount = Column(Numeric(18, 2), nullable=False)
     description = Column(String, nullable=True)
