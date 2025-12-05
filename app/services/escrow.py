@@ -148,7 +148,7 @@ async def client_confirm_milestone(
     milestone_model = (
     db.query(Milestones)
     .filter(
-        Milestones.escrow_id == escrow_model.id,
+        Milestones.escrow_id == escrow_model.project_id,
         Milestones.key == user_confirmation.milestone_key
     )
     .first()
