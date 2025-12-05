@@ -111,7 +111,7 @@ async def create_milestone_transaction(
     for milestone in transaction_instance.milestone:
         milestone_model = Milestones(
             key=milestone.key,
-            escrow_id= escrow_model.id,
+            escrow_id= escrow_model.project_id,
             milestone_name=milestone.milestone_name,
             description=milestone.description,
             amount=milestone.amount
