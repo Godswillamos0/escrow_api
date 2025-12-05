@@ -104,7 +104,7 @@ class Escrow(Base):
 
     client_agree = Column(Boolean, default=False)
     merchant_agree = Column(Boolean, default=False)
-    amount = Column(Numeric(18, 2), nullable=False)
+    amount = Column(Numeric(18, 2), nullable=True)
     status = Column(SqlEnum(EscrowStatus), nullable=False, default=EscrowStatus.PENDING)
     created_at = Column(DateTime, default=func.now())
     finalized_at = Column(DateTime, nullable=True)

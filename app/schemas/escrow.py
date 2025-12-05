@@ -16,14 +16,11 @@ class UserConfirmMilestone(BaseModel):
     user_id: str #id from the source
     milestone_key: str
     confirm_status: bool = Field(default=False)
-    title: str
-    description: str
-    amount: Decimal= Field(gt=0.00)
+    
  
-
 class Milestone(BaseModel):
     key: str
-    milestone_name: str
+    title: str
     description: Optional[str] = None
     amount: Decimal = Field(gt=0.00)
     
@@ -38,10 +35,9 @@ class DeleteMilestone(BaseModel):
     project_id: str
 
 class TransactionMilestoneInstance(BaseModel):
-    merchant_id: str #id from the source
     client_id: str #id from the source
+    merchant_id: str #id from the source
     project_id: str #id from the source
-    amount: Decimal = Field(gt=0.00)
     milestone: Optional[List[Milestone]]
     
     model_config = {
@@ -50,8 +46,20 @@ class TransactionMilestoneInstance(BaseModel):
                 "merchant_id": "merchant_id",
                 "client_id": "client_id",
                 "project_id": "project_id",
-                "amount": 100.00,
-                "milestone": []
+                "milestone": [
+                    {
+                        "key": "key1",
+                        "title": "title",
+                        "description": "description",
+                        "amount": 100.00
+                    },
+                    {
+                        "key": "key2",
+                        "title": "title",
+                        "description": "description",
+                        "amount": 100.00
+                    }
+                ]
             }
         }
     }
@@ -61,7 +69,7 @@ class TransactionInstance(BaseModel):
     merchant_id: str #id from the source
     client_id: str #id from the source
     project_id: str #id from the source
-    amount: Decimal = Field(gt=0.00)
+    amount: Optional[Decimal]
     
     
 class ReleaseFunds(BaseModel):

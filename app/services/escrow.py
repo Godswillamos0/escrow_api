@@ -71,6 +71,58 @@ async def create_transaction(
         raise HTTPException(status_code=500, detail=f"Transaction failed: {str(e)}")
     
     
+async def create_milestone_transaction(
+    transaction_instance: TransactionMilestoneInstance,
+    db: db_dependency,
+):
+    """
+    Docstring for create_milestone_transaction
+    """
+    project_model = db.query(Escrow).filter(Escrow.project_id == transaction_instance.project_id).first()
+    if not project_model:
+        client_model = db.query(User).filter(User.source_id == transaction_instance.client_id).first()
+        if not client_model:
+            raise HTTPException(status_code=404, detail="Client not found")
+        merchant_model = db.query(User).filter(User.source_id == transaction_instance.merchant_id).first()
+        if not merchant_model:
+            raise HTTPException(status_code=404, detail="Merchant not found")
+        
+        # create project
+        project_model = Escrow(
+            project_id=transaction_instance.project_id,
+            client_id = client_model.id,
+            amount = 0.00,
+            merchant_id=merchant_model.id,
+            status=EscrowStatus.PENDING,
+            created_at=datetime.now()
+        )
+        db.add(project_model)
+        db.flush()
+    amount = Decimal(0.00)       
+    #create milestone
+    for milestone in transaction_instance.milestone:
+        milestone_model = Milestones(
+            key=milestone.key,
+            escrow_id= transaction_instance.project_id,
+            milestone_name=milestone.title,
+            description=milestone.description,
+            amount=milestone.amount,
+            finished=False
+        )
+        amount += milestone.amount
+        db.add(milestone_model)
+        
+    wallet_model = db.query(Wallet).filter(Wallet.owner_id == project_model.client_id).first()
+    wallet_model.balance -= amount
+    project_model.status = EscrowStatus.FUNDED
+    
+    db.commit()
+    
+    return {
+        "project_id": transaction_instance.project_id,
+    }
+    
+    
 async def client_confirm_milestone(
     user_confirmation: UserConfirmMilestone,
     db: db_dependency,
@@ -87,17 +139,21 @@ async def client_confirm_milestone(
     
     if not merchant_model:
         raise HTTPException(status_code=404, detail="Merchant not found")
-
-    milestone_model = Milestones(
-            key=user_confirmation.milestone_key,
-            escrow_id= escrow_model.project_id,
-            milestone_name=user_confirmation.title,
-            description=user_confirmation.description,
-            amount=user_confirmation.amount
-        )
-
-    db.add(milestone_model)
-    db.flush()
+    
+    check_transaction_cancelability(user_confirmation.project_id, db)
+    check_transaction_disputability(db, user_confirmation.project_id)
+    
+    milestone_models = db.query(Milestones).filter(Milestones.key == user_confirmation.milestone_key).all()
+    if not milestone_models:
+        raise HTTPException(status_code=404, detail="Milestone not found")
+    if escrow_model.project_id not in [m.escrow_id for m in milestone_models]:
+        raise HTTPException(status_code=404, detail=f"Milestone not assigned to this project {escrow_model.project_id}, {milestone_model.escrow_id}")
+    
+    for m in milestone_models:
+        milestone_model = m if m.key == user_confirmation.milestone_key else None
+    
+    if milestone_model.finished:
+        raise HTTPException(status_code=400, detail="Milestone already finished")
 
     if escrow_model.client_id != user_model.id:
         raise HTTPException(status_code=401, detail="Client not authorized to confirm this transaction")
@@ -107,6 +163,7 @@ async def client_confirm_milestone(
     wallet_model = db.query(Wallet).filter(Wallet.owner_id == escrow_model.merchant_id).first()
     wallet_model.balance += milestone_model.amount
     milestone_model.finished = True
+    escrow_model.status = EscrowStatus.RELEASED
    
     db.commit()
     return {
