@@ -79,14 +79,18 @@ async def create_milestone_transaction(
     db: db_dependency,
 ):
     """
-    Docstring for create_milestone_transaction
-    """
+    Docstring for create_milestone_transaction"""
+    merchant_id = db.query(User).filter(User.source_id == transaction_instance.merchant_id).first()
     project_models = db.query(Escrow).filter(Escrow.project_id == transaction_instance.project_id).all()
     for project_model in project_models:
         if project_model.merchant_id == transaction_instance.merchant_id:
             project_model=project_model
             break
         project_model = None
+    project_model = db.query(Escrow).filter(
+        Escrow.project_id == transaction_instance.project_id,
+        Escrow.merchant_id == transaction_instance.merchant_id
+        ).first()
     if not project_model:
         client_model = db.query(User).filter(User.source_id == transaction_instance.client_id).first()
         if not client_model:
@@ -142,11 +146,11 @@ async def client_confirm_milestone(
         
     escrow_model = db.query(Escrow).filter(
         Escrow.project_id == user_confirmation.project_id,
-        Escrow.merchant_id == user_confirmation.merchant_id
+        Escrow.merchant_id == merchant_model.id
     ).first()
     
     if not escrow_model:
-        raise HTTPException(status_code=404, detail="Escrow not found")
+        raise HTTPException(status_code=404, detail=f"Escrow not found {merchant_model.id}, {escrow_model.merchant_id}")
     
     merchant_model = db.query(User).filter(User.id == escrow_model.merchant_id).first()
     
