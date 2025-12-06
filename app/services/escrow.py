@@ -409,7 +409,7 @@ async def cancel_transaction(
     db: db_dependency,
     cancel_request: CancelRequest
 ):
-    user_model = db.query(User).filter(User.source_id == cancel_request.user_id).first()
+    user_model = db.query(User).filter(User.source_id == cancel_request.client_id).first()
     if not user_model:
         raise HTTPException(status_code=404, detail="User does not exist")
     
@@ -464,7 +464,7 @@ async def dispute_transaction(
     """
     
     
-    user_model = db.query(User).filter(User.source_id == dispute_request.user_id).first()
+    user_model = db.query(User).filter(User.source_id == dispute_request.client_id).first()
     if not user_model:
         raise HTTPException(status_code=404, detail="User does not exist")
     
