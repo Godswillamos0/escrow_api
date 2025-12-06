@@ -349,7 +349,7 @@ async def client_release_funds(
     db: db_dependency,
     release_funds: ReleaseFunds
 ):
-    user_model = db.query(User).filter(User.source_id == release_funds.user_id).first()
+    user_model = db.query(User).filter(User.source_id == release_funds.client_id).first()
     if not user_model:
         raise HTTPException(status_code=404, detail="User does not exist")
 
