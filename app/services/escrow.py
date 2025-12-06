@@ -40,16 +40,17 @@ async def create_transaction(
             if not user_model:
                 raise HTTPException(status_code=404, detail="User not found")
             
-            project_model = db.query(Escrow).filter(
+            '''project_model = db.query(Escrow).filter(
                 Escrow.project_id==transaction_instance.project_id,
                 Escrow.merchant_id==merchant_model.id
-            )
+            ).first()
 
             merchant_model = db.query(User).filter(User.source_id == transaction_instance.merchant_id).first()
             if not merchant_model:
                 raise HTTPException(status_code=404, detail="Merchant not found")
             if project_model.client_id != user_model.id:
                 raise HTTPException(status_code=403, detail=f"Wrong client id {project_model.client_id}  {transaction_instance.client_id}")
+'''           
             escrow_model = Escrow(
                 client_id=user_model.id,
                 merchant_id=merchant_model.id,
@@ -69,9 +70,7 @@ async def create_transaction(
 
     except HTTPException:
         raise
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(status_code=500, detail=f"Transaction failed: {str(e)}")
+    
     
     
 async def create_milestone_transaction(
