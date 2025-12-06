@@ -121,6 +121,7 @@ async def get_all_banks(request: Request):
         # decode JSON only if Redis returned a string
         if isinstance(banks, str):
             banks = json.loads(banks)
+        
     
     return [
         {
