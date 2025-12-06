@@ -259,7 +259,9 @@ async def get_transaction_by_id(
     Fetch escrow transaction by project_id and return
     all finished milestones.
     """
-    merchant_model = db.query(User).filter(User.id == merchant_id).first()
+    merchant_model = db.query(User).filter(User.source_id == merchant_id).first()
+    if not merchant_model:
+        raise HTTPException(status_code=404, detail="Merchant not found")
     
     transaction_model = db.query(Escrow).filter(
             Escrow.project_id == project_id,
