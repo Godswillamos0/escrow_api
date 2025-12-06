@@ -96,7 +96,8 @@ class WalletTransaction(Base):
 class Escrow(Base):
     __tablename__ = 'escrow'
     
-    project_id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    project_id = Column(String(36), nullable=False)
 
     # FIXED HERE
     client_id = Column(String(36), ForeignKey('users.id'), nullable=False, index=True)
