@@ -260,13 +260,10 @@ async def get_transaction_by_id(
     all finished milestones.
     """
     merchant_model = db.query(User).filter(User.id == merchant_id).first()
-    if not transaction_models:
-        raise HTTPException(status_code=404, detail="Transaction not found")
     
     transaction_model = db.query(Escrow).filter(
             Escrow.project_id == project_id,
-            Escrow.merchant_id == merchant_model.id
-            ).first()
+            Escrow.merchant_id == merchant_model.id).first()
     
     if not transaction_model:
         raise HTTPException(status_code=404, detail="Transaction not found")
