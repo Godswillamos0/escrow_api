@@ -136,15 +136,15 @@ async def client_confirm_milestone(
     db: db_dependency,
 ):
     user_model = db.query(User).filter(User.source_id == user_confirmation.client_id).first()
+    merchant_model = db.query(User).filter(User.source_id ==user_confirmation.merchant_id).first()
     if not user_model:
         raise HTTPException(status_code=404, detail="User does not exist")
+        
+    escrow_model = db.query(Escrow).filter(
+        Escrow.project_id == user_confirmation.project_id,
+        Escrow.merchant_id == user_confirmation.merchant_id
+    ).first()
     
-    escrow_models = db.query(Escrow).filter(Escrow.project_id == user_confirmation.project_id).all()
-    for escrow_model in escrow_models:
-        if escrow_model.merchant_id == user_confirmation.merchant_id:
-            escrow_model = escrow_model
-            break
-        escrow_model = None
     if not escrow_model:
         raise HTTPException(status_code=404, detail="Escrow not found")
     
@@ -308,26 +308,27 @@ async def client_confirm_transaction(
 ):
 
     user_model = db.query(User).filter(User.source_id == user_confirmation.client_id).first()
+    merchant_model = db.query(User).filter(User.source_id ==user_confirmation.merchant_id).first()
+
     if not user_model:
         raise HTTPException(status_code=404, detail="User does not exist")
     
-    escrow_models = db.query(Escrow).filter(Escrow.project_id == user_confirmation.project_id).all()
-    for escrow_model in escrow_models:
-        if escrow_model.merchant_id == user_confirmation.merchant_id:
-            escrow_model = escrow_model
-            break
-        escrow_model = None
-        
+    escrow_model = db.query(Escrow).filter(
+        Escrow.project_id == user_confirmation.project_id,
+        Escrow.merchant_id == merchant_model.id
+    ).first()
+    if not escrow_model:
+        raise HTTPException(status_code=404, detail="Escrow not found")
+    
+    if not (escrow_model.client_id == user_model.id):
+        raise HTTPException(status_code=401, detail="Client not authorized to confirm this transaction")
+       
     check_transaction_cancelability(escrow_model.id, db)
     
     if escrow_model.status != EscrowStatus.FUNDED:
         raise HTTPException(status_code=400, detail="Transaction not funded or has been released")
     
-    if not escrow_model:
-        raise HTTPException(status_code=404, detail="Escrow not found")
     
-    if not escrow_model.client_id == user_model.id:
-        raise HTTPException(status_code=401, detail="Client not authorized to confirm this transaction")
     
     check_transaction_disputability(db, escrow_model.id)
     merchant_wallet = db.query(Wallet).filter(Wallet.owner_id == escrow_model.merchant_id).first()
@@ -413,17 +414,18 @@ async def cancel_transaction(
     db: db_dependency,
     cancel_request: CancelRequest
 ):
-    user_model = db.query(User).filter(User.source_id == cancel_request.user_id).first()
+    user_model = db.query(User).filter(User.source_id == cancel_request.client_id).first()
+    merchant_model = db.query(User).filter(User.source_id ==cancel_request.merchant_id).first()
     if not user_model:
         raise HTTPException(status_code=404, detail="User does not exist")
-    
-
-    escrow_models = db.query(Escrow).filter(Escrow.project_id == cancel_request.project_id).all()
-    for escrow_model in escrow_models:
-        if escrow_model.merchant_id == cancel_request.merchant_id:
-            escrow_model = escrow_model
-            break
-        escrow_model = None
+        
+    escrow_model = db.query(Escrow).filter(
+        Escrow.project_id == cancel_request.project_id,
+        Escrow.merchant_id == merchant_model.id
+    ).first()
+    if not escrow_model:
+        raise HTTPException(status_code=404, detail="Escrow not found")
+        
         
     if escrow_model.client_id != user_model.source_id:
         if escrow_model.merchant_id != user_model.source_id:
@@ -468,19 +470,17 @@ async def dispute_transaction(
     """
     
     
-    user_model = db.query(User).filter(User.source_id == dispute_request.user_id).first()
+    user_model = db.query(User).filter(User.source_id == dispute_request.client_id).first()
+    merchant_model = db.query(User).filter(User.source_id ==dispute_request.merchant_id).first()
     if not user_model:
         raise HTTPException(status_code=404, detail="User does not exist")
     
-    escrow_models = db.query(Escrow).filter(Escrow.project_id == dispute_request.project_id).all()
-    for escrow_model in escrow_models:
-        if escrow_model.merchant_id == dispute_request.merchant_id:
-            escrow_model = escrow_model
-            break
-        escrow_model = None
-    
+    escrow_model = db.query(Escrow).filter(
+        Escrow.project_id == dispute_request.project_id,
+        Escrow.merchant_id == merchant_model.id
+    ).first()
     if not escrow_model:
-        raise HTTPException(status_code=404, detail="Transaction not found")
+        raise HTTPException(status_code=404, detail="Escrow not found")
     
     if escrow_model.client_id != user_model.source_id:
         if escrow_model.merchant_id != user_model.source_id:
