@@ -3,7 +3,8 @@ from . import (
     escrow,
     paystack,
     wallet,
-    bank
+    bank,
+    task
 )
 from .admin import router as admin_router
 
@@ -30,4 +31,8 @@ router.include_router(
 
 router.include_router(
     admin_router.router
+)
+
+router.include_router(
+    task.router
 )
