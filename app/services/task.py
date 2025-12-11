@@ -1,9 +1,9 @@
 from fastapi import HTTPException, status, Path
-from app.db.dependencies import db_dependency
-from app.db.models import Task, User, Wallet
+from db.dependencies import db_dependency
+from db.models import Task, User, Wallet
 from datetime import datetime
 from decimal import Decimal
-from app.schemas.task import (CreateTask, UpdateTask)
+from schemas.task import (CreateTask, UpdateTask)
 
 
 async def save_task(
