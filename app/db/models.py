@@ -153,3 +153,18 @@ class WithdrawalBank(Base):
     account_name = Column(String, nullable=False)
 
     user = relationship("User", back_populates="banks")
+    
+    
+class Task(Base):
+    __tablename__ = "tasks"
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    task_id = Column(String(36), nullable=True)
+    merchant = Column(String, ForeignKey("users.id"), nullable=False, index=True)
+    client = Column(String, ForeignKey("users.id"), nullable=False, index=True)
+    title = Column(String, nullable=False)
+    description = Column(String, nullable=True)
+    due_date = Column(DateTime, nullable=True)
+    amount = Column(Numeric(18, 2), nullable=False)
+    status = Column(String, nullable=False, default="pending")
+    created_at = Column(DateTime, default=func.now())
+    
