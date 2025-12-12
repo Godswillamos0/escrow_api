@@ -1,6 +1,6 @@
 from fastapi import HTTPException, status, Path
 from db.dependencies import db_dependency
-from db.models import Task, User, Wallet
+from db.models import EscrowStatus, Task, User, Wallet
 from datetime import datetime
 from decimal import Decimal
 from schemas.task import (CreateTask, UpdateTask)
@@ -10,10 +10,18 @@ async def save_task(
     db: db_dependency,
     task: CreateTask
 ):
-    task_model = CreateTask(**task)
+    task_model = Task(
+        task_id = task.task_id,
+        merchant = task.merchant_id,
+        client = task.client_id,
+        title = task.title,
+        description = task.description,
+        due_date = task.due_date,
+        amount = task.amount,
+        status = EscrowStatus.PENDING
+    )
     
     db.add(task_model)
-    db.flush()
     
     #withdraw from client_id
     client_id = db.query(User).filter(User.id == task.client_id).first()
@@ -24,6 +32,7 @@ async def save_task(
     wallet_model = db.query(Wallet).filter(Wallet.owner_id==client_id.id).first()
     
     wallet_model.balance -= task_model.amount
+    task_model.status = EscrowStatus.FUNDED
     
     db.commit()
     

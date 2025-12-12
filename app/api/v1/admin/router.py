@@ -1,7 +1,7 @@
 from fastapi import APIRouter, status
 from . import (
     escrow,
-    wallet,
+    wallet
 )
 
 router = APIRouter(

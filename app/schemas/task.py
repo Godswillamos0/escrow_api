@@ -7,9 +7,9 @@ from datetime import datetime
 class CreateTask(BaseModel):
     title: str = Field(min_length=3, max_length=50)
     description: Optional[str] = Field(None, max_length=500)
-    due_date: Optional[str] = None
+    due_date: Optional[datetime] = None
     amount: Decimal = Field(gt=0.00)
-    project_id: str
+    task_id: str
     client_id: str
     merchant_id: str
 

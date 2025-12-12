@@ -10,7 +10,7 @@ router = APIRouter(
     tags=["task"]
 )
 
-router.get("/pay_task", status_code=status.HTTP_200_OK)(save_task)
+router.post("/pay_task", status_code=status.HTTP_200_OK)(save_task)
 
 router.get("/client_get_all_task", status_code=status.HTTP_200_OK)(client_get_all_task)
 

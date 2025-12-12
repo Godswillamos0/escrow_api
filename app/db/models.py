@@ -165,6 +165,6 @@ class Task(Base):
     description = Column(String, nullable=True)
     due_date = Column(DateTime, nullable=True)
     amount = Column(Numeric(18, 2), nullable=False)
-    status = Column(String, nullable=False, default="pending")
+    status = Column(SqlEnum(EscrowStatus), nullable=False, default=EscrowStatus.PENDING)
     created_at = Column(DateTime, default=func.now())
     
