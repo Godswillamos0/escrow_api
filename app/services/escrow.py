@@ -48,9 +48,11 @@ async def create_transaction(
             ).first()
             if project_model:
                 raise HTTPException(status_code=404, detail="Escrow project exist")
-            if project_model.client_id != user_model.id:
-                raise HTTPException(status_code=403, detail=f"Wrong client id {project_model.client_id}  {transaction_instance.client_id}")
-
+            try:
+                if project_model.client_id != user_model.id:
+                    raise HTTPException(status_code=403, detail=f"Wrong client id {project_model.client_id}  {transaction_instance.client_id}")
+            except AttributeError:
+                pass
                   
             escrow_model = Escrow(
                 client_id=user_model.id,
