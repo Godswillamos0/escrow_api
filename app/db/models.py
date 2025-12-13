@@ -162,9 +162,8 @@ class Task(Base):
     merchant = Column(String, ForeignKey("users.id"), nullable=False, index=True)
     client = Column(String, ForeignKey("users.id"), nullable=False, index=True)
     title = Column(String, nullable=False)
-    description = Column(String, nullable=True)
-    due_date = Column(DateTime, nullable=True)
     amount = Column(Numeric(18, 2), nullable=False)
     status = Column(SqlEnum(EscrowStatus), nullable=False, default=EscrowStatus.PENDING)
+    complete = Column(Boolean, default= False)
     created_at = Column(DateTime, default=func.now())
     

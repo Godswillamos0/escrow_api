@@ -6,8 +6,6 @@ from datetime import datetime
 
 class CreateTask(BaseModel):
     title: str = Field(min_length=3, max_length=50)
-    description: Optional[str] = Field(None, max_length=500)
-    due_date: Optional[datetime] = None
     amount: Decimal = Field(gt=0.00)
     task_id: str
     client_id: str
@@ -35,3 +33,8 @@ class TaskResponse(BaseModel):
         
 class GetTaskRequest(BaseModel):
     task_id: str
+
+class CompleteTask(BaseModel):
+    task_id: str
+    merchant_id: str
+    client_id:str
