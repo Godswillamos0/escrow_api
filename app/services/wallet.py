@@ -118,7 +118,7 @@ async def withdraw_funds(
     status=TransactionStatus.PENDING,
     #reference_code=transaction_request.reference_code,
     timestamp=transaction_request.time or datetime.utcnow(),
-    reason=transaction_request.reason,
+    #reason=transaction_request.reason,
     )
 
 

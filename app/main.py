@@ -12,7 +12,7 @@ models.Base.metadata.create_all(bind=database.engine)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # on startup
-    app.state.redis = await aioredis.from_url("redis://localhost")
+    app.state.redis = await aioredis.from_url("redis://default:4q0Rbrep2X0cOeYQJgQJC3cinFfxSHlk@redis-19323.c11.us-east-1-3.ec2.cloud.redislabs.com:19323")
     yield
     # on shutdown
     await app.state.redis.close()
